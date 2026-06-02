@@ -1,9 +1,8 @@
 """The claim query is a Postgres design. Check it compiles to the SQL we claim.
 
-Docker is not available in the test environment, so this compiles the statement
-against the PostgreSQL dialect instead of executing it. It is the difference
-between "the SQLite path works" and "the production path is what the README
-says it is".
+This compiles the statement against the PostgreSQL dialect without a server, so
+it runs in the default SQLite suite. ``test_postgres.py`` executes it for real
+when ``TEST_POSTGRES_URL`` is set.
 """
 
 from __future__ import annotations

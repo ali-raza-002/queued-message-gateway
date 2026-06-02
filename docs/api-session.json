@@ -1,0 +1,306 @@
+{
+  "captured": "docker compose stack (Postgres 16, api, worker) on 2026-11-08",
+  "runs": [
+    {
+      "worker": "REPLY_PROVIDER=echo",
+      "exchanges": [
+        {
+          "request": "GET /readyz",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "status": "ok",
+            "database": "up",
+            "detail": null
+          }
+        },
+        {
+          "request": "POST /messages",
+          "body": {
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "text": "What is a tax deduction?",
+            "client_message_id": "msg-001"
+          },
+          "status": 201,
+          "headers": {},
+          "response": {
+            "message_id": "6f8df625-8a4e-4c13-b47e-19dc60e9807d",
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "client_message_id": "msg-001",
+            "seq": 1,
+            "text": "What is a tax deduction?",
+            "state": "RECEIVED",
+            "assistant_text": null,
+            "last_error": null,
+            "attempt_count": 0,
+            "provider": null,
+            "created_at": "2026-11-07T20:24:08.007030Z",
+            "updated_at": "2026-11-07T20:24:08.007030Z"
+          }
+        },
+        {
+          "request": "POST /messages",
+          "body": {
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "text": "What is a tax deduction?",
+            "client_message_id": "msg-001"
+          },
+          "status": 200,
+          "headers": {
+            "Idempotent-Replay": "true"
+          },
+          "response": {
+            "message_id": "6f8df625-8a4e-4c13-b47e-19dc60e9807d",
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "client_message_id": "msg-001",
+            "seq": 1,
+            "text": "What is a tax deduction?",
+            "state": "RECEIVED",
+            "assistant_text": null,
+            "last_error": null,
+            "attempt_count": 0,
+            "provider": null,
+            "created_at": "2026-11-07T20:24:08.007030Z",
+            "updated_at": "2026-11-07T20:24:08.007030Z"
+          }
+        },
+        {
+          "request": "GET /messages/6f8df625-8a4e-4c13-b47e-19dc60e9807d/status",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "message_id": "6f8df625-8a4e-4c13-b47e-19dc60e9807d",
+            "state": "RECEIVED",
+            "assistant_text": null,
+            "last_error": null,
+            "attempt_count": 0,
+            "max_attempts": 3,
+            "dead_lettered": false,
+            "processing_started_at": null,
+            "completed_at": null
+          }
+        },
+        {
+          "request": "POST /messages",
+          "body": {
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "text": "And a tax credit?",
+            "client_message_id": "msg-002"
+          },
+          "status": 201,
+          "headers": {},
+          "response": {
+            "message_id": "a5cace01-362a-4853-a5af-a37863eb5c60",
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "client_message_id": "msg-002",
+            "seq": 2,
+            "text": "And a tax credit?",
+            "state": "RECEIVED",
+            "assistant_text": null,
+            "last_error": null,
+            "attempt_count": 0,
+            "provider": null,
+            "created_at": "2026-11-07T20:24:08.018157Z",
+            "updated_at": "2026-11-07T20:24:08.018157Z"
+          }
+        },
+        {
+          "request": "GET /messages/6f8df625-8a4e-4c13-b47e-19dc60e9807d/status",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "message_id": "6f8df625-8a4e-4c13-b47e-19dc60e9807d",
+            "state": "COMPLETED",
+            "assistant_text": "About What is a tax deduction? - the relevant rule is the standard deduction.",
+            "last_error": null,
+            "attempt_count": 1,
+            "max_attempts": 3,
+            "dead_lettered": false,
+            "processing_started_at": "2026-11-07T20:24:08.346856Z",
+            "completed_at": "2026-11-07T20:24:08.352126Z"
+          }
+        },
+        {
+          "request": "GET /conversations/u1?conversation_id=c1&limit=10",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "user_id": "u1",
+            "conversations": [
+              {
+                "conversation_id": "c1",
+                "messages": [
+                  {
+                    "message_id": "6f8df625-8a4e-4c13-b47e-19dc60e9807d",
+                    "user_id": "u1",
+                    "conversation_id": "c1",
+                    "client_message_id": "msg-001",
+                    "seq": 1,
+                    "text": "What is a tax deduction?",
+                    "state": "COMPLETED",
+                    "assistant_text": "About What is a tax deduction? - the relevant rule is the standard deduction.",
+                    "last_error": null,
+                    "attempt_count": 1,
+                    "provider": "echo",
+                    "created_at": "2026-11-07T20:24:08.007030Z",
+                    "updated_at": "2026-11-07T20:24:08.352126Z"
+                  },
+                  {
+                    "message_id": "a5cace01-362a-4853-a5af-a37863eb5c60",
+                    "user_id": "u1",
+                    "conversation_id": "c1",
+                    "client_message_id": "msg-002",
+                    "seq": 2,
+                    "text": "And a tax credit?",
+                    "state": "COMPLETED",
+                    "assistant_text": "Short answer on And a tax credit?: it depends on your filing status.",
+                    "last_error": null,
+                    "attempt_count": 1,
+                    "provider": "echo",
+                    "created_at": "2026-11-07T20:24:08.018157Z",
+                    "updated_at": "2026-11-07T20:24:08.370436Z"
+                  }
+                ]
+              }
+            ],
+            "page": {
+              "total": 2,
+              "limit": 10,
+              "offset": 0,
+              "has_more": false
+            }
+          }
+        },
+        {
+          "request": "POST /messages",
+          "body": {
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "text": "   "
+          },
+          "status": 422,
+          "headers": {},
+          "response": {
+            "detail": [
+              {
+                "type": "value_error",
+                "loc": [
+                  "body",
+                  "text"
+                ],
+                "msg": "Value error, text must contain a non-whitespace character",
+                "input": "   ",
+                "ctx": {
+                  "error": {}
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "worker": "REPLY_PROVIDER=simulated, REPLY_FAIL_RATE=1.0, delays 0",
+      "exchanges": [
+        {
+          "request": "POST /messages",
+          "body": {
+            "user_id": "u2",
+            "conversation_id": "c9",
+            "text": "This one will fail",
+            "client_message_id": "msg-fail"
+          },
+          "status": 201,
+          "headers": {},
+          "response": {
+            "message_id": "c1a5449b-a945-48a2-94a8-81c8c3845f4f",
+            "user_id": "u2",
+            "conversation_id": "c9",
+            "client_message_id": "msg-fail",
+            "seq": 1,
+            "text": "This one will fail",
+            "state": "RECEIVED",
+            "assistant_text": null,
+            "last_error": null,
+            "attempt_count": 0,
+            "provider": null,
+            "created_at": "2026-11-07T20:24:10.443840Z",
+            "updated_at": "2026-11-07T20:24:10.443840Z"
+          }
+        },
+        {
+          "request": "GET /messages/c1a5449b-a945-48a2-94a8-81c8c3845f4f/status",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "message_id": "c1a5449b-a945-48a2-94a8-81c8c3845f4f",
+            "state": "FAILED",
+            "assistant_text": null,
+            "last_error": "simulated upstream failure after 0.0s (attempt 3)",
+            "attempt_count": 3,
+            "max_attempts": 3,
+            "dead_lettered": true,
+            "processing_started_at": "2026-11-07T20:24:18.295880Z",
+            "completed_at": null
+          }
+        },
+        {
+          "request": "GET /dead-letters",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "items": [
+              {
+                "id": "6bd21200-a230-4a2e-b554-5fff0831f08f",
+                "message_id": "c1a5449b-a945-48a2-94a8-81c8c3845f4f",
+                "user_id": "u2",
+                "conversation_id": "c9",
+                "seq": 1,
+                "attempt_count": 3,
+                "reason": "simulated upstream failure after 0.0s (attempt 3)",
+                "created_at": "2026-11-07T20:24:18.303252Z"
+              }
+            ],
+            "page": {
+              "total": 1,
+              "limit": 50,
+              "offset": 0,
+              "has_more": false
+            }
+          }
+        },
+        {
+          "request": "GET /metrics",
+          "body": null,
+          "status": 200,
+          "headers": {},
+          "response": {
+            "received": 0,
+            "processing": 0,
+            "completed": 2,
+            "failed": 1,
+            "timeout": 0,
+            "dead_letters": 1,
+            "conversations": 2,
+            "total": 3,
+            "provider": "simulated",
+            "max_attempts": 3,
+            "strict_conversation_order": true
+          }
+        }
+      ]
+    }
+  ]
+}
