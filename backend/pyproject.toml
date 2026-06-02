@@ -2,7 +2,7 @@
 name = "aila-messaging-backend"
 version = "1.0.0"
 description = "Asynchronous message delivery API with a Postgres-backed queue"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
 [tool.ruff]
 line-length = 90
