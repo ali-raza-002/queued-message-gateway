@@ -1,0 +1,63 @@
+# Ports are in the 7221-7229 range so this stack can run alongside others.
+name: aila-messaging
+
+x-db-env: &db-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aila}:${POSTGRES_PASSWORD:-aila}@db:5432/${POSTGRES_DB:-aila}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aila}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aila}
+      POSTGRES_DB: ${POSTGRES_DB:-aila}
+    ports:
+      - "7222:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aila} -d ${POSTGRES_DB:-aila}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: ./backend
+      target: api
+    environment:
+      <<: *db-env
+    ports:
+      - "7221:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      target: worker
+    environment:
+      <<: *db-env
+      REPLY_PROVIDER: ${REPLY_PROVIDER:-simulated}
+      REPLY_MIN_DELAY_SECONDS: ${REPLY_MIN_DELAY_SECONDS:-5}
+      REPLY_MAX_DELAY_SECONDS: ${REPLY_MAX_DELAY_SECONDS:-60}
+      REPLY_FAIL_RATE: ${REPLY_FAIL_RATE:-0.2}
+      CONCURRENCY: 8
+      CLAIM_BATCH: 10
+      MAX_ATTEMPTS: 3
+      LEASE_SECONDS: 300
+      SHUTDOWN_GRACE_SECONDS: 20
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Long enough for the drain in worker/worker.py to hand leases back before
+    # the runtime escalates to SIGKILL.
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+volumes:
+  db-data:

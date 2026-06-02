@@ -1,0 +1,58 @@
+{
+  "mode": "Native SQLite API and separate echo worker; idempotent replay verified.",
+  "exchanges": [
+    {
+      "request": "POST /messages",
+      "status": 201,
+      "response": {
+        "message_id": "4200b26e-ff53-45a9-8938-6de7b2230ac7",
+        "user_id": "portfolio-fixture",
+        "conversation_id": "native-demo",
+        "client_message_id": "native-check-001",
+        "seq": 1,
+        "text": "Hello from the local fixture",
+        "state": "RECEIVED",
+        "assistant_text": null,
+        "last_error": null,
+        "attempt_count": 0,
+        "provider": null,
+        "created_at": "2026-10-28T14:53:08.038376Z",
+        "updated_at": "2026-10-28T14:53:08.038376Z"
+      }
+    },
+    {
+      "request": "POST /messages",
+      "status": 200,
+      "response": {
+        "message_id": "4200b26e-ff53-45a9-8938-6de7b2230ac7",
+        "user_id": "portfolio-fixture",
+        "conversation_id": "native-demo",
+        "client_message_id": "native-check-001",
+        "seq": 1,
+        "text": "Hello from the local fixture",
+        "state": "RECEIVED",
+        "assistant_text": null,
+        "last_error": null,
+        "attempt_count": 0,
+        "provider": null,
+        "created_at": "2026-10-28T14:53:08.038376Z",
+        "updated_at": "2026-10-28T14:53:08.038376Z"
+      }
+    },
+    {
+      "request": "GET /messages/4200b26e-ff53-45a9-8938-6de7b2230ac7/status",
+      "status": 200,
+      "response": {
+        "message_id": "4200b26e-ff53-45a9-8938-6de7b2230ac7",
+        "state": "COMPLETED",
+        "assistant_text": "On Hello from the local fixture, the usual starting point is your taxable income.",
+        "last_error": null,
+        "attempt_count": 1,
+        "max_attempts": 3,
+        "dead_lettered": false,
+        "processing_started_at": "2026-10-28T14:53:08.761511Z",
+        "completed_at": "2026-10-28T14:53:08.764650Z"
+      }
+    }
+  ]
+}
