@@ -74,7 +74,7 @@ class UtcDateTime(TypeDecorator):
         return value.astimezone(UTC)
 
 
-class MessageState(str, enum.Enum):
+class MessageState(enum.StrEnum):
     """Lifecycle of one message.
 
     ``RECEIVED`` is the queued state the API writes and a retry returns to.

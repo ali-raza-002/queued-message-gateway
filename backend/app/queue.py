@@ -49,7 +49,7 @@ class ClaimedMessage:
     attempt: int
 
 
-class FailureOutcome(str, enum.Enum):
+class FailureOutcome(enum.StrEnum):
     RETRY_SCHEDULED = "retry_scheduled"
     DEAD_LETTERED = "dead_lettered"
     LEASE_LOST = "lease_lost"
