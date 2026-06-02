@@ -5,9 +5,15 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .models import CONVERSATION_ID_LEN, MAX_TEXT_LEN, USER_ID_LEN, MessageState
+from .models import (
+    CLIENT_MESSAGE_ID_LEN,
+    CONVERSATION_ID_LEN,
+    MAX_TEXT_LEN,
+    USER_ID_LEN,
+    MessageState,
+)
 
 
 class MessageCreate(BaseModel):
@@ -18,12 +24,22 @@ class MessageCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=MAX_TEXT_LEN)
     client_message_id: str | None = Field(
         None,
-        max_length=128,
+        min_length=1,
+        max_length=CLIENT_MESSAGE_ID_LEN,
         description=(
             "Idempotency key. Re-sending the same key returns the original "
             "message instead of queueing a second one."
         ),
     )
+
+    @field_validator("text")
+    @classmethod
+    def _reject_blank_text(cls, value: str) -> str:
+        # Blank text passes min_length but no provider can answer it, so it would
+        # only reach the dead-letter table after a wasted attempt.
+        if not value.strip():
+            raise ValueError("text must contain a non-whitespace character")
+        return value
 
 
 class MessageOut(BaseModel):

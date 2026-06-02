@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+import pytest
+
 from app.main import API_VERSION
 
 
@@ -97,9 +99,24 @@ async def test_conversation_filter_and_state_filter(client):
     assert completed.json()["conversations"] == []
 
 
-async def test_empty_text_is_rejected(client):
+@pytest.mark.parametrize("text", ["", "   ", "\n\t"])
+async def test_blank_text_is_rejected(client, text):
     response = await client.post(
-        "/messages", json={"user_id": "u1", "conversation_id": "c1", "text": ""}
+        "/messages", json={"user_id": "u1", "conversation_id": "c1", "text": text}
+    )
+    assert response.status_code == 422
+
+
+async def test_empty_client_message_id_is_rejected(client):
+    """An empty key used to be swapped for a random one, silently losing dedupe."""
+    response = await client.post(
+        "/messages",
+        json={
+            "user_id": "u1",
+            "conversation_id": "c1",
+            "text": "Hi",
+            "client_message_id": "",
+        },
     )
     assert response.status_code == 422
 
