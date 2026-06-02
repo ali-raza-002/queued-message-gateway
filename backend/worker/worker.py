@@ -8,7 +8,9 @@ rather than a ``while True``:
    *first* task to finish, so a 4-minute message does not stall the other seven
    slots or the lease reaper behind it.
 2. **One bad message cannot take the process down.** Every attempt is wrapped;
-   an unexpected exception fails that one message and the loop carries on.
+   an unexpected exception fails that one message and the loop carries on. A
+   lost database connection is logged and retried on the next poll instead of
+   ending the process, which would strand every in-flight lease.
 3. **SIGTERM does not strand work.** In-flight messages get a grace period to
    finish, and whatever is still running when it expires is handed back to the
    queue without consuming a retry.
@@ -22,6 +24,8 @@ import logging
 import os
 import signal
 import uuid
+
+from sqlalchemy.exc import DBAPIError
 
 from app.db import Database
 from app.providers import (
@@ -93,7 +97,14 @@ class DeliveryWorker:
         )
         try:
             while not self.stopping:
-                await self.run_once()
+                try:
+                    await self.run_once()
+                except (DBAPIError, OSError) as exc:
+                    logger.warning(
+                        "database_unavailable",
+                        extra={"worker_id": self.worker_id, "error": str(exc)},
+                    )
+                    await self._idle(self._settings.poll_interval_seconds)
         finally:
             await self.drain()
             logger.info("worker_stopped", extra={"worker_id": self.worker_id})
@@ -126,8 +137,7 @@ class DeliveryWorker:
         )
         if grace > 0:
             done, _ = await asyncio.wait(set(self._inflight), timeout=grace)
-            for task in done:
-                self._inflight.pop(task, None)
+            self._collect(done)
 
         stragglers = dict(self._inflight)
         self._inflight.clear()
@@ -183,14 +193,31 @@ class DeliveryWorker:
                 timeout=0 if claimed_any else timeout,
                 return_when=asyncio.FIRST_COMPLETED,
             )
-            for task in done:
-                self._inflight.pop(task, None)
-            if done or claimed_any:
-                return
+            self._collect(done)
+            return
         if not claimed_any:
-            # Idle: sleep, but wake instantly on SIGTERM.
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(self._stop.wait(), timeout=timeout)
+            await self._idle(timeout)
+
+    async def _idle(self, seconds: float) -> None:
+        """Sleep, but wake instantly on SIGTERM."""
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(self._stop.wait(), timeout=seconds)
+
+    def _collect(self, done: set[asyncio.Task]) -> None:
+        for task in done:
+            message = self._inflight.pop(task, None)
+            if task.cancelled() or task.exception() is None:
+                continue
+            # _attempt only raises when the database refused its final write.
+            # The lease reaper recovers the message once the lease runs out.
+            logger.error(
+                "attempt_not_recorded",
+                exc_info=task.exception(),
+                extra={
+                    "worker_id": self.worker_id,
+                    "message_id": message.id if message else None,
+                },
+            )
 
     async def _attempt(self, message: ClaimedMessage) -> None:
         """Run one delivery attempt. Never raises."""

@@ -6,9 +6,11 @@ import asyncio
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 
 from app.models import Message, MessageState
 from app.providers import PermanentProviderError, ProviderError, ReplyRequest
+from app.queue import DeliveryQueue
 from worker.worker import DeliveryWorker
 
 from .conftest import submit
@@ -209,3 +211,66 @@ async def test_worker_is_idle_when_the_queue_is_empty(database, settings, provid
     worker = DeliveryWorker(database, settings, provider)
     assert await worker.run_once() == 0
     assert worker.inflight_count == 0
+
+
+class FlakyQueue(DeliveryQueue):
+    """Fails the first ``outages`` claims the way a dropped connection does."""
+
+    def __init__(self, *args, outages: int, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.outages = outages
+
+    async def claim(self, limit=None):
+        if self.outages:
+            self.outages -= 1
+            raise OperationalError("SELECT 1", {}, ConnectionResetError("db gone"))
+        return await super().claim(limit)
+
+
+async def test_worker_survives_a_database_outage(database, settings, service, provider):
+    message = await submit(service, "hello")
+    queue = FlakyQueue(database, settings, outages=2)
+    worker = DeliveryWorker(database, settings, provider, queue=queue)
+
+    runner = asyncio.create_task(worker.run())
+    for _ in range(200):
+        if (await reload(database, message.id)).state == MessageState.COMPLETED.value:
+            break
+        await asyncio.sleep(0.01)
+    worker.request_stop()
+    await asyncio.wait_for(runner, timeout=5)
+
+    assert queue.outages == 0
+    assert (await reload(database, message.id)).state == MessageState.COMPLETED.value
+
+
+async def test_a_failed_acknowledgement_is_logged(database, settings, service, caplog):
+    await submit(service, "hello")
+
+    class BrokenAckQueue(DeliveryQueue):
+        async def complete(self, *args, **kwargs):
+            raise OperationalError("UPDATE", {}, ConnectionResetError("db gone"))
+
+    broken = BrokenAckQueue(database, settings)
+    worker = DeliveryWorker(database, settings, ScriptedProvider("ok"), queue=broken)
+    await worker.run_once()
+    await worker.drain()
+
+    assert [r.message for r in caplog.records].count("attempt_not_recorded") == 1
+
+
+async def test_a_busy_worker_waits_one_poll_interval_not_two(database, settings, service):
+    """With work in flight and nothing new to claim, a cycle used to sleep twice."""
+    await submit(service, "slow")
+    slow_poll = settings.model_copy(update={"poll_interval_seconds": 0.3})
+    blocking = BlockingProvider()
+    worker = DeliveryWorker(database, slow_poll, blocking)
+    assert await worker.run_once() == 1
+
+    loop = asyncio.get_running_loop()
+    started = loop.time()
+    assert await worker.run_once() == 0
+    assert loop.time() - started < 0.5
+
+    blocking.release.set()
+    await worker.drain()
