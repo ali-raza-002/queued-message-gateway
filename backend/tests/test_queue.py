@@ -7,8 +7,8 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select, update
 
-from app.models import Message, MessageState, utcnow
-from app.queue import DeliveryQueue, FailureOutcome
+from app.models import DeadLetter, Message, MessageState, utcnow
+from app.queue import LEASE_EXPIRED_REASON, DeliveryQueue, FailureOutcome
 
 from .conftest import submit
 
@@ -159,6 +159,38 @@ async def test_reaper_dead_letters_an_exhausted_lease(service, queue, database):
     row = await reload(database, message.id)
     assert row.state == MessageState.FAILED.value
     assert row.dead_lettered is True
+
+
+async def test_reaper_reports_the_timeout_not_an_older_error(service, queue, database):
+    """A lease that expires after an earlier failure must not inherit its error."""
+    message = await submit(service, "hello")
+    [first] = await queue.claim()
+    await queue.fail(first, "boom")
+    async with database.begin() as session:
+        await session.execute(
+            update(Message)
+            .where(Message.id == message.id)
+            .values(available_at=utcnow() - timedelta(seconds=1))
+        )
+    await queue.claim()
+    async with database.begin() as session:
+        await session.execute(
+            update(Message)
+            .where(Message.id == message.id)
+            .values(attempt_count=3, lease_expires_at=utcnow() - timedelta(seconds=1))
+        )
+
+    result = await queue.reap_expired_leases()
+    assert result.dead_lettered == 1
+    row = await reload(database, message.id)
+    assert row.last_error == LEASE_EXPIRED_REASON
+    async with database.session() as session:
+        reason = (
+            await session.execute(
+                select(DeadLetter.reason).where(DeadLetter.message_id == message.id)
+            )
+        ).scalar_one()
+    assert reason == LEASE_EXPIRED_REASON
 
 
 async def test_dead_letter_rows_are_visible_over_http(service, queue, client):

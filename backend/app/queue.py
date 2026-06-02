@@ -312,7 +312,9 @@ class DeliveryQueue:
                 )
                 .values(
                     state=MessageState.TIMEOUT.value,
-                    last_error=func.coalesce(msg.c.last_error, LEASE_EXPIRED_REASON),
+                    # Overwrite, not coalesce: any earlier error belongs to a
+                    # previous attempt, and this attempt failed by timing out.
+                    last_error=LEASE_EXPIRED_REASON,
                     lease_expires_at=None,
                     updated_at=now,
                 )
@@ -352,7 +354,6 @@ class DeliveryQueue:
                             msg.c.conversation_id,
                             msg.c.seq,
                             msg.c.attempt_count,
-                            msg.c.last_error,
                         )
                     )
                 )
@@ -368,7 +369,7 @@ class DeliveryQueue:
                         conversation_id=row["conversation_id"],
                         seq=row["seq"],
                         attempt_count=row["attempt_count"],
-                        reason=row["last_error"] or LEASE_EXPIRED_REASON,
+                        reason=LEASE_EXPIRED_REASON,
                     )
                 )
 
