@@ -1,4 +1,6 @@
 # Ports are in the 7221-7229 range so this stack can run alongside others.
+# Every ${VAR} below can be overridden from a .env file next to this one
+# (see .env.example).
 name: aila-messaging
 
 x-db-env: &db-env
