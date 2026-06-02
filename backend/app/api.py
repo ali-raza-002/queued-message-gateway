@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -26,6 +27,8 @@ from .schemas import (
 )
 from .service import MessageService
 from .settings import Settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -182,8 +185,10 @@ async def readyz(request: Request, response: Response) -> ReadinessOut:
         async with database.session() as session:
             await session.execute(text("SELECT 1"))
     except Exception as exc:  # noqa: BLE001 - surfaced to the caller as 503
+        # Driver messages can name hosts and users, so they go to the log only.
+        logger.warning("readiness_failed", exc_info=exc)
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return ReadinessOut(status="degraded", database="down", detail=str(exc))
+        return ReadinessOut(status="degraded", database="down", detail=type(exc).__name__)
     return ReadinessOut(status="ok", database="up")
 
 

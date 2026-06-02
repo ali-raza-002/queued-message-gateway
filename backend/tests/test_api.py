@@ -5,8 +5,10 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
-from app.main import API_VERSION
+from app.db import Database
+from app.main import API_VERSION, create_app
 
 
 async def test_post_message_returns_201_with_seq_one(client):
@@ -149,3 +151,18 @@ async def test_dead_letters_endpoint_starts_empty(client):
         "items": [],
         "page": {"total": 0, "limit": 50, "offset": 0, "has_more": False},
     }
+
+
+async def test_readyz_is_503_without_leaking_the_driver_message(settings, tmp_path):
+    missing = tmp_path / "no-such-dir" / "db.sqlite"
+    broken = Database(f"sqlite+aiosqlite:///{missing}")
+    app = create_app(settings, broken)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as http:
+        response = await http.get("/readyz")
+    await broken.dispose()
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["database"] == "down"
+    assert body["detail"] == "OperationalError"
+    assert str(tmp_path) not in response.text
