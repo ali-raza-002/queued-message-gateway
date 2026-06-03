@@ -1,0 +1,38 @@
+[project]
+name = "aila-messaging-backend"
+version = "1.0.0"
+description = "Asynchronous message delivery API with a Postgres-backed queue"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 90
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # import order
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "SIM",  # simplifiable code
+    "C4",   # comprehensions
+    "RET",  # return style
+    "ARG",  # unused arguments
+    "DTZ",  # naive datetimes
+    "ASYNC",
+]
+ignore = [
+    "B008",  # FastAPI's Depends()/Query() defaults are the documented idiom
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001", "ARG002"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["error::DeprecationWarning:app.*", "error::DeprecationWarning:worker.*"]
+addopts = "-q"
